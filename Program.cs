@@ -1,15 +1,270 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
+using WinShell;
+using System.IO;
 
 namespace FMListProperties
 {
     class Program
     {
+
+        const string c_helpText = @"FMListProperties:
+Lists all Windows Property System properties on a file.
+
+Syntax: FMListProperties: [flags] [filenames]
+
+Flags:
+   -h  Show this help text.
+   -c  Use Canonical names. By default uses display names.
+   -f  Show flags.
+   -k  Include PropKeys as well as names.
+
+Filenames:
+   One or more filenames must be specified. Wildcards may be included.";
+
+        static PropertySystem s_propSys;
+        static bool s_useCanonicalNames = false;
+        static bool s_includePropKeys = false;
+        static bool s_includeFlags = false;
+
         static void Main(string[] args)
         {
+            var paths = new List<string>();
+
+            bool showHelp = false;
+
+            // Get flags first
+            foreach (var arg in args)
+            {
+                switch (arg.ToLower())
+                {
+                    case "-c":
+                        s_useCanonicalNames = true;
+                        break;
+
+                    case "-k":
+                        s_includePropKeys = true;
+                        break;
+
+                    case "-f":
+                        s_includeFlags = true;
+                        break;
+
+                    case "-h":
+                    case "-?":
+                        showHelp = true;
+                        break;
+
+                    default:
+                        paths.Add(arg);
+                        break;
+                }
+            }
+
+            if (showHelp)
+            {
+                Console.WriteLine(c_helpText);
+            }
+
+            else
+            {
+                WriteProperties(paths);
+            }
+
+            Win32Interop.ConsoleHelper.PromptAndWaitIfSoleConsole();
         }
+
+        static void WriteProperties(IEnumerable<string> paths)
+        {
+            try
+            {
+                s_propSys = new PropertySystem();
+
+                foreach (var path in paths)
+                {
+                    try
+                    {
+                        string folder = Path.GetDirectoryName(path);
+                        if (string.IsNullOrEmpty(folder)) folder = Environment.CurrentDirectory;
+                        string pattern = Path.GetFileName(path);
+                        foreach (var filename in Directory.EnumerateFiles(folder, pattern, SearchOption.TopDirectoryOnly))
+                        {
+                            Console.WriteLine(filename);
+                            WriteProperties(filename);
+                            Console.WriteLine();
+                        }
+                    }
+                    catch (Exception err)
+                    {
+#if DEBUG
+                        Console.WriteLine(err.ToString());
+#else
+                        Console.WriteLine(err.Message);
+#endif
+                    }
+                }
+            }
+            finally
+            {
+                if (s_propSys != null)
+                    s_propSys.Dispose();
+                s_propSys = null;
+            }
+        }
+
+        static void WriteProperties(string filename)
+        {
+            var properties = new List<Property>();
+
+            using (var ps = PropertyStore.Open(filename))
+            {
+                int n = ps.Count;
+                for (int i = 0; i < n; ++i)
+                {
+                    properties.Add(new Property(s_propSys, ps, i));
+                }
+            }
+
+            {
+                var isom = FileMeta.IsomCoreMetadata.TryOpen(filename);
+                if (isom != null)
+                {
+                    using (isom)
+                    {
+                        properties.Add(new Property("Isom.Brand", isom.MajorBrand));
+                        if (isom.CreationTime != null)
+                        {
+                            properties.Add(new Property("Isom.CreationTime", isom.CreationTime?.ToString("o")));
+                        }
+                        if (isom.ModificationTime != null)
+                        {
+                            properties.Add(new Property("Isom.ModificationTime", isom.ModificationTime?.ToString("o")));
+                        }
+                    }
+                }
+            }
+
+            properties.Sort(CompareProperties);
+
+            foreach(var prop in properties)
+            {
+                Console.Write("   ");
+                if (s_includeFlags)
+                {
+                    Console.Write(prop.Flags);
+                    Console.Write(' ');
+                }
+
+                if (s_includePropKeys)
+                {
+                    Console.Write($"{prop.PropertyKey.ToString(),-45}");
+                }
+
+                if (!s_useCanonicalNames)
+                {
+                    Console.Write($"{prop.DisplayName + ':',-45} ");
+                }
+                else
+                {
+                    Console.Write($"{prop.CanonicalName + ':',-45} ");
+                }
+
+                Console.WriteLine(prop.Value);
+            }
+        }
+
+        static int CompareProperties(Property a, Property b)
+        {
+            int cmp = string.Compare(a.CanonicalName, b.CanonicalName, StringComparison.OrdinalIgnoreCase);
+            if (cmp != 0) return cmp;
+
+            return string.Compare(a.DisplayName, b.DisplayName, StringComparison.OrdinalIgnoreCase);
+        }
+
+    }
+
+    class Property
+    {
+        public PROPERTYKEY PropertyKey { get; set; }
+        public string DisplayName { get; set; }
+        public string CanonicalName { get; set; }
+        public string Value { get; set; }
+        public string Flags { get; set; }
+
+        public Property(PropertySystem propSys, PropertyStore ps, int index)
+        {
+            var pk = ps.GetAt(index);
+            PropertyKey = pk;
+
+            var propDef = propSys.GetPropertyDescription(pk);
+
+            if (propDef != null)
+            {
+                // Names
+                DisplayName = propDef.DisplayName;
+                CanonicalName = propDef.CanonicalName;
+                if (string.IsNullOrEmpty(DisplayName))
+                {
+                    DisplayName = CanonicalName;
+                    if (string.IsNullOrEmpty(DisplayName))
+                    {
+                        DisplayName = pk.ToString();
+                    }
+                }
+                if (string.IsNullOrEmpty(CanonicalName))
+                {
+                    CanonicalName = DisplayName;
+                }
+
+                // Flags
+                {
+                    var f = propDef.TypeFlags;
+                    char[] cf = new char[4];
+                    cf[0] = (f & PROPDESC_TYPE_FLAGS.PDTF_ISSYSTEMPROPERTY) == 0 ? '-' : 'S';
+                    cf[1] = (f & PROPDESC_TYPE_FLAGS.PDTF_ISINNATE) == 0 ? '-' : 'I';
+                    cf[2] = (f & PROPDESC_TYPE_FLAGS.PDTF_CANBEPURGED) == 0 ? '-' : 'P';
+                    cf[3] = (f & PROPDESC_TYPE_FLAGS.PDTF_ISVIEWABLE) == 0 ? '-' : 'V';
+                    Flags = new string(cf);
+                }
+            }
+            else
+            {
+                CanonicalName = DisplayName = pk.ToString();
+                Flags = "????";
+            }
+
+            Value = ValueToString(ps.GetValue(pk));
+        }
+
+        public Property(string displayName, string value)
+        {
+            PropertyKey = new PROPERTYKEY(Guid.Empty, 0);
+            DisplayName = displayName;
+            CanonicalName = displayName;
+            Value = value;
+            Flags = "----";
+        }
+
+        static string ValueToString(object value)
+        {
+            if (value == null) return "(null)";
+
+            var array = value as Array;
+            if (array != null)
+            {
+                StringBuilder sb = new StringBuilder();
+                foreach (object obj in array)
+                {
+                    if (sb.Length > 0)
+                        sb.Append("; ");
+                    sb.Append(obj.ToString());
+                }
+                return sb.ToString();
+            }
+
+            return value.ToString();
+        }
+
     }
 }
