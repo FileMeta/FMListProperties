@@ -278,7 +278,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.";
                 Flags = "????";
             }
 
-            Value = ValueToString(ps.GetValue(pk));
+            Value = ValueToString(ps.GetValue(pk), pk);
         }
 
         public Property(string displayName, string value)
@@ -290,21 +290,39 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.";
             Flags = "----";
         }
 
-        static string ValueToString(object value)
+        static PROPERTYKEY s_pkDuration = new PROPERTYKEY("64440490-4c8b-11d1-8b70-080036b11a03",3);
+
+        static string ValueToString(object value, PROPERTYKEY pk)
         {
             if (value == null) return "(null)";
 
-            var array = value as Array;
-            if (array != null)
             {
-                StringBuilder sb = new StringBuilder();
-                foreach (object obj in array)
+                var array = value as Array;
+                if (array != null)
                 {
-                    if (sb.Length > 0)
-                        sb.Append("; ");
-                    sb.Append(obj.ToString());
+                    StringBuilder sb = new StringBuilder();
+                    foreach (object obj in array)
+                    {
+                        if (sb.Length > 0)
+                            sb.Append("; ");
+                        sb.Append(obj.ToString());
+                    }
+                    return sb.ToString();
                 }
-                return sb.ToString();
+            }
+
+            if (value is DateTime)
+            {
+                var dt = (DateTime)value;
+                if (dt.Kind == DateTimeKind.Local)
+                    dt = DateTime.SpecifyKind(dt, DateTimeKind.Unspecified); // Prevent reporting local timezone on output string.
+                return dt.ToString("o");
+            }
+
+            if (pk.Equals(s_pkDuration))
+            {
+                var ts = TimeSpan.FromTicks((long)(UInt64)value);
+                return ts.ToString("c");
             }
 
             return value.ToString();
