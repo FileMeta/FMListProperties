@@ -19,9 +19,45 @@ Flags:
    -c  Use Canonical names. By default uses display names.
    -f  Show flags.
    -k  Include PropKeys as well as names.
+   -l  Show source code license.
 
 Filenames:
-   One or more filenames must be specified. Wildcards may be included.";
+   One or more filenames must be specified. Wildcards may be included.
+
+Info:
+   Source code and latest version at https://github.com/FileMeta/FMListProperties
+   Source code available under BSD 3-Clause License.";
+
+        const string c_licenseText = @"BSD 3-Clause License
+
+Copyright (c) 2018, Brandt Redd
+All rights reserved.
+https://github.com/FileMeta/FMListProperties
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+* Redistributions of source code must retain the above copyright notice, this
+  list of conditions and the following disclaimer.
+
+* Redistributions in binary form must reproduce the above copyright notice,
+  this list of conditions and the following disclaimer in the documentation
+  and/or other materials provided with the distribution.
+
+* Neither the name of the copyright holder nor the names of its
+  contributors may be used to endorse or promote products derived from
+  this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS ""AS IS""
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED.IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+OR TORT(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.";
 
         static PropertySystem s_propSys;
         static bool s_useCanonicalNames = false;
@@ -33,6 +69,7 @@ Filenames:
             var paths = new List<string>();
 
             bool showHelp = false;
+            bool showLicense = false;
 
             // Get flags first
             foreach (var arg in args)
@@ -51,6 +88,10 @@ Filenames:
                         s_includeFlags = true;
                         break;
 
+                    case "-l":
+                        showLicense = true;
+                        break;
+
                     case "-h":
                     case "-?":
                         showHelp = true;
@@ -66,7 +107,10 @@ Filenames:
             {
                 Console.WriteLine(c_helpText);
             }
-
+            else if (showLicense)
+            {
+                Console.WriteLine(c_licenseText);
+            }
             else
             {
                 WriteProperties(paths);
