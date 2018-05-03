@@ -68,7 +68,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.";
         {
             var paths = new List<string>();
 
-            bool showHelp = false;
+            bool showHelp = (args.Length == 0);
             bool showLicense = false;
 
             // Get flags first
