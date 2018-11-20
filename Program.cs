@@ -17,6 +17,7 @@ Syntax: FMListProperties: [flags] [filenames]
 Flags:
    -h  Show this help text.
    -c  Use Canonical names. By default uses display names.
+   -b  Show Both canonical and display names.
    -f  Show flags.
    -k  Include PropKeys as well as names.
    -l  Show source code license.
@@ -61,6 +62,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.";
 
         static PropertySystem s_propSys;
         static bool s_useCanonicalNames = false;
+        static bool s_useBothNames = false;
         static bool s_includePropKeys = false;
         static bool s_includeFlags = false;
 
@@ -78,6 +80,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.";
                 {
                     case "-c":
                         s_useCanonicalNames = true;
+                        break;
+
+                    case "-b":
+                        s_useBothNames = true;
                         break;
 
                     case "-k":
@@ -205,13 +211,17 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.";
                     Console.Write($"{prop.PropertyKey.ToString(),-45}");
                 }
 
-                if (!s_useCanonicalNames)
+                if (s_useBothNames)
                 {
-                    Console.Write($"{prop.DisplayName + ':',-45} ");
+                    Console.Write($"{prop.CanonicalName + '(' + prop.DisplayName + "):",-45} ");
+                }
+                else if (s_useCanonicalNames)
+                {
+                    Console.Write($"{prop.CanonicalName + ':',-45} ");
                 }
                 else
                 {
-                    Console.Write($"{prop.CanonicalName + ':',-45} ");
+                    Console.Write($"{prop.DisplayName + ':',-45} ");
                 }
 
                 Console.WriteLine(prop.Value);
