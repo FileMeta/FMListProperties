@@ -211,18 +211,28 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.";
                     Console.Write($"{prop.PropertyKey.ToString(),-45}");
                 }
 
+                string name;
                 if (s_useBothNames)
                 {
-                    Console.Write($"{prop.CanonicalName + '(' + prop.DisplayName + "):",-45} ");
+                    if (string.IsNullOrEmpty(prop.DisplayName)
+                        || string.Equals(prop.CanonicalName, prop.DisplayName, StringComparison.Ordinal))
+                    {
+                        name = prop.CanonicalName;
+                    }
+                    else
+                    {
+                        name = $"{prop.CanonicalName}({prop.DisplayName})";
+                    }
                 }
                 else if (s_useCanonicalNames)
                 {
-                    Console.Write($"{prop.CanonicalName + ':',-45} ");
+                    name = prop.CanonicalName;
                 }
                 else
                 {
-                    Console.Write($"{prop.DisplayName + ':',-45} ");
+                    name = prop.DisplayName;
                 }
+                Console.Write($"{name + ':',-45} ");
 
                 Console.WriteLine(prop.Value);
             }
