@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using WinShell;
 using System.IO;
+using Interop;
 
 namespace FMListProperties
 {
@@ -250,7 +251,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.";
 
     class Property
     {
-        public PROPERTYKEY PropertyKey { get; set; }
+        public PropertyKey PropertyKey { get; set; }
         public string DisplayName { get; set; }
         public string CanonicalName { get; set; }
         public string Value { get; set; }
@@ -303,16 +304,16 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.";
 
         public Property(string displayName, string value)
         {
-            PropertyKey = new PROPERTYKEY(Guid.Empty, 0);
+            PropertyKey = new PropertyKey(Guid.Empty, 0);
             DisplayName = displayName;
             CanonicalName = displayName;
             Value = value;
             Flags = "----";
         }
 
-        static PROPERTYKEY s_pkDuration = new PROPERTYKEY("64440490-4c8b-11d1-8b70-080036b11a03",3);
+        static PropertyKey s_pkDuration = new PropertyKey("64440490-4c8b-11d1-8b70-080036b11a03",3);
 
-        static string ValueToString(object value, PROPERTYKEY pk)
+        static string ValueToString(object value, PropertyKey pk)
         {
             if (value == null) return "(null)";
 
